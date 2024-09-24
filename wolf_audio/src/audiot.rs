@@ -1,5 +1,3 @@
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Read, Seek};
 
@@ -28,30 +26,4 @@ pub fn read_audiot_chunk<R: Read + Seek>(
     reader.read_exact(&mut buffer)?;
 
     Ok(buffer)
-}
-
-pub struct AudioT {
-    pub opl: OPL,
-}
-
-unsafe impl Send for OPL {}
-
-impl AudioT {
-    pub fn new() -> Self {
-        let mut opl: OPL = OPL {
-            ..Default::default()
-        };
-
-        unsafe { OPL_reset(&mut opl as *mut OPL) }
-
-        Self { opl }
-    }
-
-    pub fn send_data(&mut self, reg: u32, value: u8) {
-        unsafe { OPL_writeReg(&mut self.opl as *mut OPL, reg, value) }
-    }
-
-    pub fn get_sample(&mut self) -> i16 {
-        unsafe { OPL_calc(&mut self.opl as *mut OPL) }
-    }
 }

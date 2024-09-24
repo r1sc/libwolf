@@ -1,0 +1,15 @@
+[package]
+name = "wolf_audio"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2"
+byteorder = "1.5.0"
+cpal = "0.15.3"
+minifb = "0.27.0"
+
+
+[build-dependencies]
+bindgen = "0.70.1"
+cc = "1.1"
