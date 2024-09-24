@@ -1,6 +1,6 @@
 mod audiot;
 
-use std::io::Cursor;
+use std::{env::args, io::Cursor};
 
 use audiot::read_audiohed;
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -9,6 +9,12 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 const STARTMUSIC: usize = 261;
 
 fn main() {
+    let music_number = args()
+        .nth(1)
+        .expect("usage: wolf_audio <music number>")
+        .parse::<usize>()
+        .expect("<music number> must be a number");
+
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -36,7 +42,7 @@ fn main() {
 
     let audio_data = audiot::read_audiot_chunk(
         &mut std::fs::File::open(r"C:\classic\WOLF3D\AUDIOT.WL6").unwrap(),
-        STARTMUSIC + 24,
+        STARTMUSIC + music_number,
         &audio_head,
     )
     .unwrap();
@@ -104,6 +110,7 @@ fn main() {
 
     stream.play().unwrap();
 
-    // Wait for key
+    // Wait for enter
+    println!("Press ENTER to exit");
     std::io::stdin().read_line(&mut String::new()).unwrap();
 }
