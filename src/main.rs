@@ -23,12 +23,14 @@ fn main() {
     let mut supported_configs_range = device
         .supported_output_configs()
         .expect("error while querying configs");
+    
     let supported_config = supported_configs_range
         .next()
         .expect("no supported config?!")
         .with_max_sample_rate();
 
     let config = supported_config.config();
+    println!("Using output config: {:?}", supported_config);
 
     let song_freq_hz = 700;
     let sample_rate = supported_config.sample_rate().0;
@@ -87,10 +89,14 @@ fn main() {
                 while num_samples_ready > 0 {
                     let sample = a.get_sample();
 
-                    data[buffer_pos] = sample;
-                    data[buffer_pos + 1] = sample; // Stereo..
-
-                    buffer_pos += 2;
+                    for _ in 0..config.channels as usize {
+                        data[buffer_pos] = sample;
+                        buffer_pos += 1;
+                        if buffer_pos >= data.len() {
+                            break;
+                        }
+                    }
+                    
                     num_samples_ready -= 1;
 
                     if buffer_pos >= data.len() {
