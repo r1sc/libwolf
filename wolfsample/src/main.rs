@@ -1,16 +1,6 @@
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
-mod audiot;
-mod imf;
-mod vswap;
-
-use cpal::{
-    traits::{DeviceTrait, HostTrait, StreamTrait},
-    Stream,
-};
 use minifb::{Key, Window, WindowOptions};
-use std::{env::args, fs::File, io::BufReader, time::Duration};
-use vswap::VSWAPArchive;
+use std::{env::args, fs::File, io::BufReader};
+use libwolf::vswap::VSWAPArchive;
 
 const GAMEPAL: [u8; 768] = [
     0x00, 0x00, 0x00, 0x00, 0x00, 0x2A, 0x00, 0x2A, 0x00, 0x00, 0x2A, 0x2A, 0x2A, 0x00, 0x00, 0x2A,
@@ -63,50 +53,6 @@ const GAMEPAL: [u8; 768] = [
     0x1F, 0x00, 0x1E, 0x1E, 0x00, 0x1D, 0x1D, 0x00, 0x1C, 0x1C, 0x00, 0x1B, 0x1B, 0x26, 0x00, 0x22,
 ];
 
-fn start_music(wolf_base_path: &str, music_number: usize) -> Stream {
-    let host = cpal::default_host();
-    let device = host
-        .default_output_device()
-        .expect("no output device available");
-
-    let mut supported_configs_range = device
-        .supported_output_configs()
-        .expect("error while querying configs");
-
-    let supported_config = supported_configs_range
-        .next()
-        .expect("no supported config?!")
-        .with_max_sample_rate();
-
-    let config = supported_config.config();
-    println!("Using output config: {:?}", supported_config);
-
-    let sample_rate = supported_config.sample_rate().0;
-
-    let mut imf = imf::Imf::new(wolf_base_path, music_number, sample_rate).unwrap();
-
-    let stream = match device.build_output_stream(
-        &config,
-        move |data: &mut [i16], _: &cpal::OutputCallbackInfo| match imf
-            .fill_audio_buffer(data, config.channels as usize)
-        {
-            Ok(_) => {}
-            Err(e) => panic!("Error while filling audio buffer: {}", e),
-        },
-        move |_err| {
-            // react to errors here.
-        },
-        None, // None=blocking, Some(Duration)=timeout
-    ) {
-        Ok(stream) => stream,
-        Err(err) => panic!("An error occurred: {}", err),
-    };
-
-    stream.play().unwrap();
-
-    stream
-}
-
 fn main() {
     let music_number = args()
         .nth(1)
@@ -135,6 +81,25 @@ fn main() {
 
     vswap.rasterize_wall(18, &palette_u32, &mut output_buffer);
     vswap.rasterize_sprite(54, &palette_u32, &mut output_buffer);
+   
+    let output_sample_rate = 44100;
+    let num_streaming_buffers = 4;    
+    let music_buffer_size = 12000;
+    let num_channels = 2; // Stereo
+
+    let mut imf = libwolf::imf::Imf::new(wolf_base_path, music_number, output_sample_rate).unwrap();
+
+    let mut mixer = libwolf::mixer::Mixer::new(num_streaming_buffers);
+    let mut music_buffer: Vec<i16> = vec![0; music_buffer_size * num_channels as usize];
+
+    for _ in 0..num_streaming_buffers {
+        imf.fill_audio_buffer(&mut music_buffer, num_channels).unwrap();
+        mixer.queue_music_data(output_sample_rate, num_channels, &music_buffer);
+    }
+
+    let pcm_sound = mixer.load_raw_pcm(7000, &vswap.raw_pcm_chunks[music_number]);
+    mixer.play_pcm_buffer(&pcm_sound, 0.2, true);
+
 
     let scale = 10;
     let mut window = Window::new(
@@ -146,15 +111,7 @@ fn main() {
     .unwrap_or_else(|e| {
         panic!("{}", e);
     });
-
-    window.set_target_fps(30);
-
-    // Give cpal it's own thread. Otherwise local thread sleeps can cause the buffers to go out of sync... sigh
-    std::thread::spawn(move || {     
-        // This variable must be here otherwise the stream will go out of scope and stop itself
-        let _a = start_music(wolf_base_path, music_number);
-        std::thread::park();
-    });
+    window.set_target_fps(60);
 
     while window.is_open() {
         if window.is_key_pressed(Key::Right, minifb::KeyRepeat::Yes)
@@ -172,5 +129,15 @@ fn main() {
         window.set_title(&format!("Sprite: {}", current_sprite));
 
         window.update_with_buffer(&output_buffer, 64, 64).unwrap();
+
+        // Process music
+        mixer.unqueue_processed_buffers();
+
+        if mixer.get_num_empty_music_buffers() > 0 {
+            // mixer.print_buffer_queue();
+
+            imf.fill_audio_buffer(&mut music_buffer, num_channels).unwrap();
+            mixer.queue_music_data(output_sample_rate, num_channels, &music_buffer);
+        }
     }
 }

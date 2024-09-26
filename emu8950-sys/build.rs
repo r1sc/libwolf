@@ -7,8 +7,10 @@ use std::path::PathBuf;
 fn main() {
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=wrapper.h");
-    
-    cc::Build::new().file("emu8950.c").compile("emu8950");
+    println!("cargo:rerun-if-changed=emu8950/*.c");
+    println!("cargo:rerun-if-changed=emu8950/*.h");
+
+    cc::Build::new().files(&["emu8950/emu8950.c", "emu8950/emuadpcm.c"]).compile("emu8950");
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
@@ -20,7 +22,7 @@ fn main() {
         .derive_default(true)
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
@@ -31,5 +33,4 @@ fn main() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
-
 }

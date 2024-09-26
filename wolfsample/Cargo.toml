@@ -1,0 +1,8 @@
+[package]
+name = "wolfsample"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libwolf = { path = "../libwolf" }
+minifb = "0.27.0"

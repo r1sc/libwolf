@@ -1,6 +1,6 @@
 [workspace]
-
+resolver = "2"
 members = [ 
-    "openal-soft_sys",
-    "wolf_audio",
+    "libwolf",
+    "wolfsample"
 ]

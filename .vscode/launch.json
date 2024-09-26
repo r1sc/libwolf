@@ -7,15 +7,34 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'wolf_audio'",
+            "name": "Debug executable 'libwolf'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=wolf_audio",
-                    "--package=wolf_audio"
+                    "--bin=libwolf",
+                    "--package=libwolf"
                 ],
                 "filter": {
-                    "name": "wolf_audio",
+                    "name": "libwolf",
+                    "kind": "bin"
+                }
+            },
+            "args": ["14"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'libwolf'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=libwolf",
+                    "--package=libwolf"
+                ],
+                "filter": {
+                    "name": "libwolf",
                     "kind": "bin"
                 }
             },
@@ -25,16 +44,34 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'wolf_audio'",
+            "name": "Debug executable 'wolfsample'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=wolfsample",
+                    "--package=wolfsample"
+                ],
+                "filter": {
+                    "name": "wolfsample",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'wolfsample'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=wolf_audio",
-                    "--package=wolf_audio"
+                    "--bin=wolfsample",
+                    "--package=wolfsample"
                 ],
                 "filter": {
-                    "name": "wolf_audio",
+                    "name": "wolfsample",
                     "kind": "bin"
                 }
             },

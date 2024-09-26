@@ -2,10 +2,15 @@ use std::io::{Cursor, Read, Seek};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
+pub struct PCMInfo {
+    pub chunk_start_index: u16,
+    pub length: u16,
+}
+
 pub struct VSWAPArchive {
     pub wall_chunks: Vec<Vec<u8>>,
     pub sprite_chunks: Vec<Vec<u8>>,
-    pub sound_chunks: Vec<Vec<u8>>,
+    pub raw_pcm_chunks: Vec<Vec<u8>>,
 }
 
 impl VSWAPArchive {
@@ -26,7 +31,8 @@ impl VSWAPArchive {
         let mut sprite_chunks = Vec::new();
         let mut sound_chunks = Vec::new();
 
-        for i in 0..chunks_in_file {
+        // Skip last chunk, that's special
+        for i in 0..chunks_in_file - 1 {
             reader
                 .seek(std::io::SeekFrom::Start(chunk_offsets[i] as u64))
                 .unwrap();
@@ -43,6 +49,49 @@ impl VSWAPArchive {
             }
         }
 
+        reader
+            .seek(std::io::SeekFrom::Start(
+                chunk_offsets[chunks_in_file - 1] as u64,
+            ))
+            .unwrap();
+
+        // Read the pcm info, which is the last "sound" chunk in the file
+        let mut pcm_infos = Vec::new();
+        let last_sound_chunk_len = chunk_lengths[chunks_in_file - 1] / 4;
+
+        for _ in 0..last_sound_chunk_len {
+            pcm_infos.push(PCMInfo {
+                chunk_start_index: reader.read_u16::<LittleEndian>().unwrap(),
+                length: reader.read_u16::<LittleEndian>().unwrap(),
+            });
+        }
+
+        // Then build the actual pcm chunks, some spanning multiple chunks
+        let mut raw_pcm_chunks = Vec::new();
+
+        for i in 0..pcm_infos.len()-1 {
+            let pcm_info = &pcm_infos[i];
+            let next_chunk_info = &pcm_infos[i + 1];
+
+            let chunks = &sound_chunks
+                [pcm_info.chunk_start_index as usize..next_chunk_info.chunk_start_index as usize];
+
+            // From the specified chunk in the pcm_info to the next chunk,
+            // join the chunks together and take the first pcm_info.length bytes
+
+            // Why not read the entire sound data as one big buffer?
+            // Because the raw chunk data is padded, and we should not play the padding
+
+            let raw_pcm_chunk = chunks
+                .iter()
+                .flatten()
+                .take(pcm_info.length as usize)
+                .copied()
+                .collect::<Vec<_>>();
+
+            raw_pcm_chunks.push(raw_pcm_chunk);
+        }
+
         if cfg!(debug_assertions) {
             println!(
                 "Num walls: {}, num sprites: {}, num sounds: {}",
@@ -55,7 +104,7 @@ impl VSWAPArchive {
         Ok(Self {
             wall_chunks,
             sprite_chunks,
-            sound_chunks,
+            raw_pcm_chunks,
         })
     }
 
@@ -108,15 +157,6 @@ impl VSWAPArchive {
                     pixel_offset += 1;
                 }
             }
-        }
-    }
-
-    pub fn rasterize_sound(&self, sound_num: usize, output_buffer: &mut[i16]) {
-        let sound_data: &[u8] = &self.sound_chunks[sound_num];
-        let mut reader = Cursor::new(&sound_data);
-
-        for p in output_buffer.iter_mut() {
-            *p = reader.read_i16::<LittleEndian>().unwrap();
         }
     }
 }

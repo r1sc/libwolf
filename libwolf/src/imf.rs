@@ -1,17 +1,15 @@
 use std::io::Cursor;
 
 use byteorder::{LittleEndian, ReadBytesExt};
+// use emu8950_sys::{OPL_calc, OPL_new, OPL_writeReg, OPL};
 
-use crate::{
-    audiot::{read_audiohed, read_audiot_chunk},
-    OPL_calc, OPL_reset, OPL_writeReg, OPL,
-};
+use crate::audiot::{read_audiohed, read_audiot_chunk};
 
 const STARTMUSIC: usize = 261;
 const SONG_FREQ_HZ: u32 = 700;
 
 pub struct Imf {
-    pub opl: OPL,
+    opl: opl3_rs::Opl3Device,
     num_samples_ready: usize,
     time_counter: u32,
     next_command_at: u32,
@@ -20,19 +18,14 @@ pub struct Imf {
     opl_ticks_per_sample: u32,
 }
 
-unsafe impl Send for OPL {}
-
 impl Imf {
     pub fn new(
         wolf3d_path: &str,
         music_number: usize,
         output_sample_rate: u32,
     ) -> std::io::Result<Self> {
-        let mut opl: OPL = OPL {
-            ..Default::default()
-        };
-
-        unsafe { OPL_reset(&mut opl as *mut OPL) }
+        // let opl = unsafe { OPL_new(3579545, output_sample_rate) };
+        let opl = opl3_rs::Opl3Device::new(output_sample_rate);
 
         let audio_head = read_audiohed(&mut std::fs::File::open(format!(
             "{}/AUDIOHED.WL6",
@@ -62,7 +55,7 @@ impl Imf {
     pub fn fill_audio_buffer(
         &mut self,
         data: &mut [i16],
-        num_channels: usize,
+        num_channels: u32,
     ) -> std::io::Result<()> {
         let mut buffer_pos = 0;
 
@@ -83,22 +76,23 @@ impl Imf {
                 let value = self.audio_cursor.read_u8().unwrap();
                 let delay = self.audio_cursor.read_u16::<LittleEndian>().unwrap();
 
-                self.next_command_at = self.time_counter + (delay as u32);
+                self.next_command_at = self.time_counter + delay as u32;
 
-                // a.send_data(reg as u32, value);
-                unsafe {
-                    OPL_writeReg(&mut self.opl as *mut OPL, reg as u32, value);
-                }
+                // unsafe { OPL_writeReg(self.opl, reg as u32, value) };
+                self.opl
+                    .write_register(reg, value, opl3_rs::OplRegisterFile::Primary, false);
             }
 
             self.time_counter += 1;
             self.num_samples_ready += self.opl_ticks_per_sample as usize;
 
             while self.num_samples_ready > 0 {
-                let sample = unsafe { OPL_calc(&mut self.opl as *mut OPL) };
+                // let sample = unsafe { OPL_calc(self.opl) } * 6; // Increase gain otherwise music is too quiet
+                let mut samples: [i16; 2] = [0, 0];
+                self.opl.generate(&mut samples).unwrap();
 
-                for _ in 0..num_channels {
-                    data[buffer_pos] = sample;
+                for i in 0..num_channels  {
+                    data[buffer_pos] = samples[(i % num_channels) as usize];
                     buffer_pos += 1;
                     if buffer_pos >= data.len() {
                         break;
