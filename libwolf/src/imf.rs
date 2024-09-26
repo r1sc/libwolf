@@ -1,9 +1,7 @@
 use std::io::Cursor;
 
-use byteorder::{LittleEndian, ReadBytesExt};
-// use emu8950_sys::{OPL_calc, OPL_new, OPL_writeReg, OPL};
-
 use crate::audiot::{read_audiohed, read_audiot_chunk};
+use byteorder::{LittleEndian, ReadBytesExt};
 
 const STARTMUSIC: usize = 261;
 const SONG_FREQ_HZ: u32 = 700;
@@ -24,7 +22,6 @@ impl Imf {
         music_number: usize,
         output_sample_rate: u32,
     ) -> std::io::Result<Self> {
-        // let opl = unsafe { OPL_new(3579545, output_sample_rate) };
         let opl = opl3_rs::Opl3Device::new(output_sample_rate);
 
         let audio_head = read_audiohed(&mut std::fs::File::open(format!(
@@ -78,7 +75,6 @@ impl Imf {
 
                 self.next_command_at = self.time_counter + delay as u32;
 
-                // unsafe { OPL_writeReg(self.opl, reg as u32, value) };
                 self.opl
                     .write_register(reg, value, opl3_rs::OplRegisterFile::Primary, false);
             }
@@ -87,12 +83,11 @@ impl Imf {
             self.num_samples_ready += self.opl_ticks_per_sample as usize;
 
             while self.num_samples_ready > 0 {
-                // let sample = unsafe { OPL_calc(self.opl) } * 6; // Increase gain otherwise music is too quiet
                 let mut samples: [i16; 2] = [0, 0];
                 self.opl.generate(&mut samples).unwrap();
 
-                for i in 0..num_channels  {
-                    data[buffer_pos] = samples[(i % num_channels) as usize];
+                for i in 0..num_channels {
+                    data[buffer_pos] = samples[(i % num_channels) as usize] * 3; // Increase gain, music is too quiet. This might cause clipping or out of range values...
                     buffer_pos += 1;
                     if buffer_pos >= data.len() {
                         break;

@@ -125,12 +125,12 @@ impl VSWAPArchive {
 
         let left_pix = sprite_reader.read_u16::<LittleEndian>().unwrap();
         let right_pix = sprite_reader.read_u16::<LittleEndian>().unwrap();
+
         let num_columns = right_pix - left_pix + 1;
         let column_offsets = (0..num_columns)
             .map(|_| sprite_reader.read_u16::<LittleEndian>().unwrap())
             .collect::<Vec<_>>();
 
-        // left pix, right pix, column offsets
         let mut pixel_offset = sprite_reader.position();
 
         for x in 0..num_columns {
