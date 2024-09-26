@@ -1,3 +1,0 @@
-[submodule "emu8950-sys/emu8950"]
-	path = emu8950-sys/emu8950
-	url = https://github.com/digital-sound-antiques/emu8950.git
