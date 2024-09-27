@@ -114,7 +114,7 @@ impl VSWAPArchive {
         for x in 0..64 {
             for y in 0..64 {
                 let pix = wall_data[x * 64 + y] as usize;
-                output_buffer[y * 64 + x] = palette[pix];
+                output_buffer[y * 320 + x] = palette[pix];
             }
         }
     }
@@ -152,7 +152,7 @@ impl VSWAPArchive {
 
                 for y in starting_row..ending_row {
                     let pix = sprite_data[pixel_offset as usize] as usize;
-                    output_buffer[y as usize * 64 + x as usize] = palette[pix];
+                    output_buffer[y as usize * 320 + x as usize] = palette[pix];
 
                     pixel_offset += 1;
                 }
