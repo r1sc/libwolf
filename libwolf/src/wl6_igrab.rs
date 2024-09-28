@@ -1,5 +1,5 @@
 #[repr(usize)]
-pub enum GraphicNums {
+pub enum GraphicNum {
     H_BJPIC = 3,
     H_CASTLEPIC,      // 4
     H_BLAZEPIC,       // 5
@@ -135,7 +135,10 @@ pub enum GraphicNums {
     MUTANTBJPIC,   // 132
     PAUSEDPIC,     // 133
     GETPSYCHEDPIC, // 134
+}
 
+#[repr(usize)]
+pub enum Texts {
     ORDERSCREEN = 136,
     ERRORSCREEN, // 137
     T_HELPART,   // 138

@@ -4,8 +4,15 @@ use std::{
 };
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use thiserror::Error;
 
-use crate::wl6_igrab;
+use crate::wl6_igrab::{self, GraphicNum};
+
+#[derive(Debug, Error)]
+pub enum GrArchiveError {
+    #[error("Not a pic")]
+    NotAPic,
+}
 
 pub struct GrArchive {
     huff_dict: [HuffNode; 255],
@@ -69,10 +76,6 @@ impl GrArchive {
         this
     }
 
-    pub fn get_pic_size_for_chunk(&self, chunk_index: usize) -> &PicSize {
-        &self.pic_sizes[chunk_index - wl6_igrab::STARTPICS]
-    }
-
     fn huff_expand<R: Read, W: Write>(&self, mut compressed_reader: R, dest_writer: &mut W) {
         let head_node = &self.huff_dict[254];
         let mut current_node = head_node;
@@ -95,13 +98,14 @@ impl GrArchive {
             }
 
             if bit == 0x80 {
+                // We're at the end of the current byte, fetch the next one
                 if let Ok(c) = compressed_reader.read_u8() {
                     current_char = c;
                 } else {
-                    // Done
+                    // No more data in the input stream, we're done
                     break;
                 }
-                bit = 1;
+                bit = 1; 
             } else {
                 bit <<= 1;
             }
@@ -158,5 +162,44 @@ impl GrArchive {
         self.huff_expand(compressed_reader, &mut dest);
 
         dest
+    }
+
+    pub fn load_pic(&mut self, pic_no: GraphicNum) -> Result<Pic, GrArchiveError> {
+        let chunk_index = pic_no as usize;
+        if !(wl6_igrab::STARTPICS..wl6_igrab::STARTPICM).contains(&chunk_index) {
+            return Err(GrArchiveError::NotAPic);
+        }
+        let data = self.expand_chunk(chunk_index);
+
+        let size = self.pic_sizes[chunk_index - wl6_igrab::STARTPICS];
+
+        Ok(Pic { data, size })
+    }
+}
+
+pub struct Pic {
+    size: PicSize,
+    data: Vec<u8>,
+}
+
+impl Pic {
+    pub fn draw(&self, dest_x: u16, dest_y: u16, output_buffer: &mut [u32], palette_u32: &[u32]) {
+        let quater_width = self.size.width / 4;
+        let plane_size = (self.size.width as usize * self.size.height as usize) / 4;
+        let mut i = 0;
+
+        for y in 0..self.size.height as usize {
+            let dst_index_y = (y + dest_y as usize) * 320;
+
+            for x in 0..quater_width as usize {
+                let dst_index = dst_index_y + (x + dest_x as usize) * 4;
+
+                output_buffer[dst_index] = palette_u32[self.data[i] as usize];
+                output_buffer[dst_index + 1] = palette_u32[self.data[i + plane_size] as usize];
+                output_buffer[dst_index + 2] = palette_u32[self.data[i + plane_size * 2] as usize];
+                output_buffer[dst_index + 3] = palette_u32[self.data[i + plane_size * 3] as usize];
+                i += 1;
+            }
+        }
     }
 }

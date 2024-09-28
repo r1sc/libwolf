@@ -7,3 +7,4 @@ edition = "2021"
 byteorder = "1.5.0"
 openal-sys = { version = "1.16.0" }
 opl3-rs = "0.2.0"
+thiserror = "1.0.64"

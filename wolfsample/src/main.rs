@@ -76,23 +76,8 @@ fn main() {
     let wolf_base_path = r"c:\classic\wolf3d";
 
     let mut gr = gr::GrArchive::new(wolf_base_path);
-    let chunk_index = wl6_igrab::GraphicNums::TITLEPIC as usize;
-    let title_pic = gr.expand_chunk(chunk_index);
-
-    let pic_size = gr.get_pic_size_for_chunk(chunk_index);
-    let quater_width = pic_size.width / 4;
-    let plane_size = (pic_size.width as usize * pic_size.height as usize) / 4;
-    let mut i = 0;
-    for y in 0..pic_size.height as usize {
-        for x in 0..quater_width as usize {
-            let dst_index = y * 320 + x * 4;
-            screen_buffer[dst_index + 0] = palette_u32[title_pic[i] as usize];
-            screen_buffer[dst_index + 1] = palette_u32[title_pic[i + plane_size] as usize];
-            screen_buffer[dst_index + 2] = palette_u32[title_pic[i + plane_size * 2] as usize];
-            screen_buffer[dst_index + 3] = palette_u32[title_pic[i + plane_size * 3] as usize];
-            i += 1;
-        }
-    }
+    let pic = gr.load_pic(wl6_igrab::GraphicNum::L_BJWINSPIC).unwrap();
+    pic.draw(200, 50, &mut screen_buffer, &palette_u32);
 
     let mut reader = BufReader::new(File::open(format!("{}/vswap.wl6", wolf_base_path)).unwrap());
     let vswap = VSWAPArchive::open(&mut reader).unwrap();
@@ -119,8 +104,6 @@ fn main() {
 
     let pcm_sound = mixer.load_raw_pcm(7000, &vswap.raw_pcm_chunks[asset_number]);
     mixer.play_pcm_buffer(&pcm_sound, 0.2, true);
-
-
 
     let scale = 2;
     let mut window = Window::new(

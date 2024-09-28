@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'libwolf'",
+            "name": "Debug executable 'wolfsample'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=libwolf",
-                    "--package=libwolf"
+                    "--bin=wolfsample",
+                    "--package=wolfsample"
                 ],
                 "filter": {
-                    "name": "libwolf",
+                    "name": "wolfsample",
                     "kind": "bin"
                 }
             },
@@ -40,25 +40,7 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'wolfsample'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=wolfsample",
-                    "--package=wolfsample"
-                ],
-                "filter": {
-                    "name": "wolfsample",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
+        },        
         {
             "type": "lldb",
             "request": "launch",

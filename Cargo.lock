@@ -322,6 +322,7 @@ dependencies = [
  "byteorder",
  "openal-sys",
  "opl3-rs",
+ "thiserror",
 ]
 
 [[package]]
