@@ -7,6 +7,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'wolf3d-rs'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=wolf3d-rs",
+                    "--package=wolf3d-rs"
+                ],
+                "filter": {
+                    "name": "wolf3d-rs",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug executable 'wolfsample'",
             "cargo": {
                 "args": [
@@ -19,7 +37,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["14"],
+            "args": ["24"],
             "cwd": "${workspaceFolder}"
         },
         {

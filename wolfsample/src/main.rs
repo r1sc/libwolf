@@ -2,6 +2,55 @@ use libwolf::{gr, vswap::VSWAPArchive, wl6_igrab};
 use minifb::{Key, Window, WindowOptions};
 use std::{env::args, fs::File, io::BufReader};
 
+// fn blit(
+//     src_data: &[u8],
+//     src_width: u16,
+//     src_height: u16,
+//     dest_x: usize,
+//     dest_y: usize,
+//     dest_data: &mut [u32],
+//     palette: &[u32],
+// ) {
+//     for j in 0..src_height as usize {
+//         for i in 0..src_width as usize {
+//             let color_index = src_data[j * src_width as usize + i] as usize;
+//             dest_data[(dest_y + j) * 320 + dest_x + i] = palette[color_index];
+//         }
+//     }
+// }
+
+struct ScratchBuffer<'a> {
+    data: Vec<u8>,
+    palette: &'a [u32],
+}
+
+impl<'a> ScratchBuffer<'a> {
+    pub fn new(palette: &'a [u32]) -> Self {
+        ScratchBuffer {
+            data: vec![0; 320 * 200],
+            palette,
+        }
+    }
+
+    pub fn blit(
+        &self,
+        src_width: u16,
+        src_height: u16,
+        dest_data: &mut [u32],
+        dest_x: usize,
+        dest_y: usize,
+        rotate: bool,
+    ) {
+        for y in 0..src_height as usize {
+            for x in 0..src_width as usize {
+                let (x, y) = if rotate { (y, x) } else { (x, y) };
+                let color_index = self.data[y * 320 + x] as usize;
+                dest_data[(dest_y + y) * 320 + dest_x + x] = self.palette[color_index];
+            }
+        }
+    }
+}
+
 fn main() {
     let asset_number = args()
         .nth(1)
@@ -20,23 +69,31 @@ fn main() {
         palette_u32[i] = (r << brightness << 16) | (g << brightness << 8) | b << brightness;
     }
 
-    let mut screen_buffer: Vec<u32> = vec![0; 320 * 200];
+    let mut screen_buffer_u32: Vec<u32> = vec![0; 320 * 200];
 
-    libwolf::signon::draw(&mut screen_buffer, &palette_u32);
+    let mut scratch_buffer = ScratchBuffer::new(&palette_u32);
+
+    libwolf::signon::draw(&mut scratch_buffer.data);
+    scratch_buffer.blit(320, 200, &mut screen_buffer_u32, 0, 0, false);
 
     let wolf_base_path = r"c:\classic\wolf3d";
 
     let mut gr = gr::GrArchive::new(wolf_base_path);
+
     let pic = gr.load_pic(wl6_igrab::GraphicNum::L_BJWINSPIC).unwrap();
-    pic.draw(200, 50, &mut screen_buffer, &palette_u32);
+    pic.draw(&mut scratch_buffer.data);
+    scratch_buffer.blit(pic.size.width, pic.size.height, &mut screen_buffer_u32, 200, 50, false);
 
     let mut reader = BufReader::new(File::open(format!("{}/vswap.wl6", wolf_base_path)).unwrap());
     let vswap = VSWAPArchive::open(&mut reader).unwrap();
 
     let mut current_sprite = 0;
 
-    vswap.rasterize_wall(18, &palette_u32, &mut screen_buffer);
-    vswap.rasterize_sprite(54, &palette_u32, &mut screen_buffer);
+    vswap.rasterize_wall(18, &mut scratch_buffer.data);
+    scratch_buffer.blit(64, 64, &mut screen_buffer_u32, 0, 0, true);
+
+    vswap.rasterize_sprite(54, &mut scratch_buffer.data);
+    scratch_buffer.blit(64, 64, &mut screen_buffer_u32, 0, 0, false);
 
     let output_sample_rate = 44100;
     let num_streaming_buffers = 4;
@@ -74,15 +131,17 @@ fn main() {
             && current_sprite < vswap.sprite_chunks.len() - 1
         {
             current_sprite += 1;
-            screen_buffer.fill(0);
-            vswap.rasterize_sprite(current_sprite, &palette_u32, &mut screen_buffer);
+            // screen_buffer_u8.fill(0);
+            // vswap.rasterize_sprite(current_sprite, &mut screen_buffer_u8);
         } else if window.is_key_pressed(Key::Left, minifb::KeyRepeat::Yes) && current_sprite > 0 {
             current_sprite -= 1;
-            screen_buffer.fill(0);
-            vswap.rasterize_sprite(current_sprite, &palette_u32, &mut screen_buffer);
+            // screen_buffer_u8.fill(0);
+            // vswap.rasterize_sprite(current_sprite, &mut screen_buffer_u8);
         }
 
-        window.update_with_buffer(&screen_buffer, 320, 200).unwrap();
+        window
+            .update_with_buffer(&screen_buffer_u32, 320, 200)
+            .unwrap();
 
         // Process music
         mixer.unqueue_processed_buffers();

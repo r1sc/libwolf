@@ -105,7 +105,7 @@ impl GrArchive {
                     // No more data in the input stream, we're done
                     break;
                 }
-                bit = 1; 
+                bit = 1;
             } else {
                 bit <<= 1;
             }
@@ -178,26 +178,26 @@ impl GrArchive {
 }
 
 pub struct Pic {
-    size: PicSize,
-    data: Vec<u8>,
+    pub size: PicSize,
+    pub data: Vec<u8>,
 }
 
 impl Pic {
-    pub fn draw(&self, dest_x: u16, dest_y: u16, output_buffer: &mut [u32], palette_u32: &[u32]) {
+    pub fn draw(&self, output_buffer: &mut [u8]) {
         let quater_width = self.size.width / 4;
         let plane_size = (self.size.width as usize * self.size.height as usize) / 4;
         let mut i = 0;
 
         for y in 0..self.size.height as usize {
-            let dst_index_y = (y + dest_y as usize) * 320;
+            let dst_index_y = y * 320;
 
             for x in 0..quater_width as usize {
-                let dst_index = dst_index_y + (x + dest_x as usize) * 4;
+                let dst_index = dst_index_y + x * 4;
 
-                output_buffer[dst_index] = palette_u32[self.data[i] as usize];
-                output_buffer[dst_index + 1] = palette_u32[self.data[i + plane_size] as usize];
-                output_buffer[dst_index + 2] = palette_u32[self.data[i + plane_size * 2] as usize];
-                output_buffer[dst_index + 3] = palette_u32[self.data[i + plane_size * 3] as usize];
+                output_buffer[dst_index] = self.data[i];
+                output_buffer[dst_index + 1] = self.data[i + plane_size];
+                output_buffer[dst_index + 2] = self.data[i + plane_size * 2];
+                output_buffer[dst_index + 3] = self.data[i + plane_size * 3];
                 i += 1;
             }
         }

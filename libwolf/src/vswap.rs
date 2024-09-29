@@ -108,18 +108,17 @@ impl VSWAPArchive {
         })
     }
 
-    pub fn rasterize_wall(&self, wall_num: usize, palette: &[u32], output_buffer: &mut [u32]) {
+    pub fn rasterize_wall(&self, wall_num: usize, output_buffer: &mut [u8]) {
         let wall_data: &[u8] = &self.wall_chunks[wall_num];
 
         for x in 0..64 {
             for y in 0..64 {
-                let pix = wall_data[x * 64 + y] as usize;
-                output_buffer[y * 320 + x] = palette[pix];
+                output_buffer[y * 320 + x] = wall_data[x * 64 + y];
             }
         }
     }
 
-    pub fn rasterize_sprite(&self, sprite_num: usize, palette: &[u32], output_buffer: &mut [u32]) {
+    pub fn rasterize_sprite(&self, sprite_num: usize, output_buffer: &mut [u8]) {
         let sprite_data: &[u8] = &self.sprite_chunks[sprite_num];
         let mut sprite_reader = Cursor::new(&sprite_data);
 
@@ -151,8 +150,7 @@ impl VSWAPArchive {
                 starting_row >>= 1;
 
                 for y in starting_row..ending_row {
-                    let pix = sprite_data[pixel_offset as usize] as usize;
-                    output_buffer[y as usize * 320 + x as usize] = palette[pix];
+                    output_buffer[y as usize * 320 + x as usize] = sprite_data[pixel_offset as usize];
 
                     pixel_offset += 1;
                 }
