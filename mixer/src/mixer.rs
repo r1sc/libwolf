@@ -10,6 +10,7 @@ pub struct Mixer {
     static_source: ALuint,
     music_source: ALuint,
     streaming_queue: VecDeque<ALuint>,
+    temp_unqueued_buffers: Vec<ALuint>
 }
 
 impl Drop for Mixer {
@@ -48,6 +49,8 @@ impl Mixer {
             static_source,
             music_source,
             streaming_queue,
+            // Be prepared to unqueue all buffers in worst case
+            temp_unqueued_buffers: vec![0; num_music_buffers]
         }
     }
 
@@ -64,15 +67,14 @@ impl Mixer {
                 return;
             }
 
-            let mut unqueued_buffers: [ALuint; 16] = [0; 16];
             alSourceUnqueueBuffers(
                 self.music_source,
                 num_processed,
-                unqueued_buffers.as_mut_ptr(),
+                self.temp_unqueued_buffers.as_mut_ptr(),
             );
 
             (0..num_processed as usize).for_each(|i| {
-                self.streaming_queue.push_back(unqueued_buffers[i]);
+                self.streaming_queue.push_back(self.temp_unqueued_buffers[i]);
             });
         }
     }

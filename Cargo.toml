@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
 members = [ 
-    "libwolf", "omf-extract", "wolf3d-rs",
+    "libwolf", "mixer", "omf-extract", "wolf3d-rs",
     "wolfsample"
 ]

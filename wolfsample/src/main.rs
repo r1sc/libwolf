@@ -102,7 +102,7 @@ fn main() {
 
     let mut imf = libwolf::imf::Imf::new(wolf_base_path, asset_number, output_sample_rate).unwrap();
 
-    let mut mixer = libwolf::mixer::Mixer::new(num_streaming_buffers);
+    let mut mixer = mixer::Mixer::new(num_streaming_buffers);
     let mut music_buffer: Vec<i16> = vec![0; music_buffer_size * num_channels as usize];
 
     for _ in 0..num_streaming_buffers {
