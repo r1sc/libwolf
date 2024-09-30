@@ -1,4 +1,5 @@
 pub mod audiot;
+pub mod gamemaps;
 pub mod gr;
 pub mod imf;
 pub mod mixer;
